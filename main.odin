@@ -20,7 +20,7 @@ mode := imode.debug
 main :: proc() {
 	rl.SetConfigFlags({.VSYNC_HINT})
 	rl.SetTargetFPS(144)
-	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "D2RENA")
+	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, cstring("D2RENA"))
 
 	hero := new_hero(
 		width = 100.0,
@@ -35,6 +35,8 @@ main :: proc() {
 	)
 	enemies := create_enemies(3)
 
+	camera := rl.Camera2D{}
+
 	for !rl.WindowShouldClose() {
 		//------------------------LOGIC------------------------------------
 		hero_moved_last_frame := hero.moved_this_frame
@@ -43,7 +45,6 @@ main :: proc() {
 		x := hero.pos_x
 		y := hero.pos_y
 
-		camera := rl.Camera2D{}
 
 		if rl.IsKeyDown(.LEFT) || rl.IsKeyDown(.A) {
 			direction := direction.left
@@ -74,9 +75,6 @@ main :: proc() {
 			move_entity(&hero, hero.move_direction, f32(hero.weight), &camera)
 		}
 
-		if hero_moved_last_frame && !hero.moved_this_frame {
-			move_entity(&hero, hero.move_direction, f32(hero.weight) * 10, &camera)
-		}
 		// \\ ------------------------LOGIC END------------------------------
 
 
@@ -88,6 +86,7 @@ main :: proc() {
 		//drawing entities
 		draw_entity(&hero, rect)
 		draw_enemies_moving_from_side_to_side(enemies)
+		//\\drawing entities
 
 		rl.BeginMode2D(camera)
 		rl.EndMode2D()
@@ -236,28 +235,31 @@ move_entity :: proc(hero: ^Hero, direction: direction, velocity: f32, camera: ^r
 	hero.move_direction = direction
 
 	delta := rl.GetFrameTime()
-	new_x, new_y: f32
+	new_x := hero.pos_x
+	new_y := hero.pos_y
 	switch direction {
 	case .up:
 		new_y = clamp(hero.pos_y - velocity * delta, 0.0, f32(rl.GetScreenHeight()))
 		y_diff := hero.pos_y - new_y
 	case .down:
-		new_y := clamp(hero.pos_y + velocity * delta, 0, f32(rl.GetScreenHeight()))
+		new_y = clamp(hero.pos_y + velocity * delta, 0, f32(rl.GetScreenHeight()))
 		y_diff := hero.pos_y - new_y
 	case .left:
-		new_x := clamp(hero.pos_x - velocity * delta, 0, f32(rl.GetScreenWidth()))
+		new_x = clamp(hero.pos_x - velocity * delta, 0, f32(rl.GetScreenWidth()))
 		x_diff := hero.pos_x - new_x
 	case .right:
-		new_x := clamp(hero.pos_x + velocity * delta, 0, f32(rl.GetScreenWidth()))
+		new_x = clamp(hero.pos_x + velocity * delta, 0, f32(rl.GetScreenWidth()))
 		x_diff := hero.pos_x - new_x
 	case .None:
 		fmt.println("stopped")
 	}
-
 	hero.pos_y = new_y
 	hero.pos_x = new_x
-    //camera.target.x = hero.pos_x
-    //camera.target.y = hero.pos_y
+	ct := &camera.target
+	ct[0] = hero.pos_x
+	ct[1] = hero.pos_y
+    ct.x = hero.pos_x
+    ct.y = hero.pos_y
 }
 
 
