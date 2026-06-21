@@ -2,6 +2,7 @@ package main
 import c "core:c"
 import fmt "core:fmt"
 import math "core:math"
+import rand "core:math/rand"
 import os "core:os"
 import rl "vendor:raylib"
 
@@ -32,6 +33,7 @@ main :: proc() {
 		move_direction = nil,
 		weight = 2,
 	)
+	enemies := create_enemies(3)
 
 	for !rl.WindowShouldClose() {
 		//------------------------LOGIC------------------------------------
@@ -70,26 +72,24 @@ main :: proc() {
 			move_entity(&hero, hero.move_direction, f32(hero.weight))
 		}
 
+		if hero_moved_last_frame && !hero.moved_this_frame {
+			move_entity(&hero, hero.move_direction, f32(hero.weight) * 10)
+		}
+
 		//-----------------------RENDERING-----------------------------------
 		rl.BeginDrawing()
 		rl.DrawFPS(5, 5)
 		rl.ClearBackground({150, 190, 220, 255})
 
-		//draw_terminal(0, f32(top_y) - 300)
+		camera := rl.Camera2D{}
 
-
-		//tmpBuf :[]byte
-		//debug_text := strings.concatenate({"X: ", strconv.write_int(tmpBuf[:], i64(x), 10), "Y: ", strconv.write_int(tmpBuf[:], i64(y), 10)})
-		//debug_info_on_screen(0, 360, strings.clone_to_cstring(debug_text))
-
-
-		//camera := rl.Camera2D{}
+		//drawing entities
 		draw_entity(&hero, rect)
-		//rl.BeginMode2D(camera)
-		//rl.EndMode2D()
-		if hero_moved_last_frame && !hero.moved_this_frame {
-			move_entity(&hero, hero.move_direction, f32(hero.weight) * 10)
-		}
+		draw_enemies_moving_from_side_to_side(enemies)
+
+		rl.BeginMode2D(camera)
+		rl.EndMode2D()
+
 
 		rl.EndDrawing()
 	}
@@ -113,7 +113,6 @@ Hero :: struct {
 	last_frame_moved:  bool,
 	moved_this_frame:  bool,
 }
-
 
 
 new_hero :: proc(
@@ -162,27 +161,48 @@ direction :: enum {
 }
 
 Enemy :: struct {
-    pos: rl.Vector2,
-    movespeed: f16,
-    velocity: f16,
-    acceleration: f16,
-    health: int,
+	pos:          rl.Vector2,
+	movespeed:    f16,
+	velocity:     f16,
+	acceleration: f16,
+	health:       int,
+	width:        f32,
 }
 
 
-spawn_enemies:: proc() {
-    enemy_count :: 3
-    enemies: [enemy_count]Enemy
-    enemy_padding := 10
-    enemy_y := 10
-    //TODO:spawn enemies moving from side to side
-    //for i in 0..<enemy_count {
-        //enemies[i] = Enemy {
-         //   pos: rl.Vector2{rand.
-        //}
-        //enemy
-    //}
+create_enemies :: proc(count: int) -> []Enemy {
+	enemies := make([]Enemy, count)
+	enemy_padding: f32 = 100
+	enemy_y: f32 = 20
+
+	for i in 0 ..< count {
+		rand_number := clamp(rand.float32() * 3000, 0.0, f32(rl.GetScreenWidth()))
+		fmt.println(rand_number)
+		enemies[i] = Enemy {
+			pos          = rl.Vector2{rand_number, enemy_y},
+			movespeed    = 50,
+			velocity     = 200,
+			acceleration = .2,
+			health       = 100,
+			width        = 30,
+		}
+		enemy_y += enemy_padding
+	}
+
+	return enemies
 }
+
+draw_enemies_moving_from_side_to_side :: proc(enemies: []Enemy) {
+	for enemy in enemies {
+		cos := math.cos(rl.GetTime())
+		x := f32(cos * WINDOW_WIDTH / 2) + WINDOW_WIDTH / 2 - enemy.width //TODO: add moving with enemy speed - now speed is static and stable
+		pos := enemy.pos
+		posP := &pos
+		posP[0] = x
+		rl.DrawCircleV(pos, enemy.width, COLOR_RED)
+	}
+}
+
 is_direction_opposite :: proc(dir1: direction, dir2: direction) -> bool {
 	if dir1 == .up && dir2 == .down || dir1 == .down && dir2 == .up {
 		return true
@@ -233,7 +253,6 @@ move_entity :: proc(hero: ^Hero, direction: direction, velocity: f32) {
 
 draw_entity :: proc(hero: ^Hero, shape: rl.Rectangle) {
 	rl.DrawRectangleRec({hero.pos_x, hero.pos_y, hero.width, hero.height}, COLOR_RED)
-
 	if mode == .debug {
 		rl.DrawLine(
 			c.int(hero.pos_x + (hero.width / 2)),
