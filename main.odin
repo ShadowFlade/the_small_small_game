@@ -27,7 +27,7 @@ main :: proc() {
 		height = 100.0,
 		pos_x = 0,
 		pos_y = 360,
-		movespeed = 300,
+		movespeed = 370,
 		move_velocity = 0,
 		move_acceleration = .2,
 		move_direction = nil,
@@ -43,45 +43,47 @@ main :: proc() {
 		x := hero.pos_x
 		y := hero.pos_y
 
-		if rl.IsKeyDown(.LEFT) {
+		camera := rl.Camera2D{}
+
+		if rl.IsKeyDown(.LEFT) || rl.IsKeyDown(.A) {
 			direction := direction.left
 			new_hero_velocity := calc_hero_velocity(hero, direction)
-			move_entity(&hero, direction, new_hero_velocity)
+			move_entity(&hero, direction, new_hero_velocity, &camera)
 			hero.moved_this_frame = true
 		}
-		if rl.IsKeyDown(.RIGHT) {
+		if rl.IsKeyDown(.RIGHT) || rl.IsKeyDown(.D) {
 			direction := direction.right
 			new_hero_velocity := calc_hero_velocity(hero, direction)
-			move_entity(&hero, direction, new_hero_velocity)
+			move_entity(&hero, direction, new_hero_velocity, &camera)
 			hero.moved_this_frame = true
 		}
-		if rl.IsKeyDown(.DOWN) {
+		if rl.IsKeyDown(.DOWN) || rl.IsKeyDown(.S) {
 			direction := direction.down
 			new_hero_velocity := calc_hero_velocity(hero, direction)
-			move_entity(&hero, direction, new_hero_velocity)
+			move_entity(&hero, direction, new_hero_velocity, &camera)
 			hero.moved_this_frame = true
 		}
-		if rl.IsKeyDown(.UP) {
+		if rl.IsKeyDown(.UP) || rl.IsKeyDown(.W) {
 			direction := direction.up
 			new_hero_velocity := calc_hero_velocity(hero, direction)
-			move_entity(&hero, direction, new_hero_velocity)
+			move_entity(&hero, direction, new_hero_velocity, &camera)
 			hero.moved_this_frame = true
 		}
 		rect := rl.Rectangle{hero.pos_x, hero.pos_y, hero.width, hero.height}
 		if hero_moved_last_frame && !hero.moved_this_frame {
-			move_entity(&hero, hero.move_direction, f32(hero.weight))
+			move_entity(&hero, hero.move_direction, f32(hero.weight), &camera)
 		}
 
 		if hero_moved_last_frame && !hero.moved_this_frame {
-			move_entity(&hero, hero.move_direction, f32(hero.weight) * 10)
+			move_entity(&hero, hero.move_direction, f32(hero.weight) * 10, &camera)
 		}
+		// \\ ------------------------LOGIC END------------------------------
+
 
 		//-----------------------RENDERING-----------------------------------
 		rl.BeginDrawing()
 		rl.DrawFPS(5, 5)
 		rl.ClearBackground({150, 190, 220, 255})
-
-		camera := rl.Camera2D{}
 
 		//drawing entities
 		draw_entity(&hero, rect)
@@ -92,6 +94,7 @@ main :: proc() {
 
 
 		rl.EndDrawing()
+		// \\ ------------------END RENDERING---------------------------------
 	}
 
 	rl.CloseWindow()
@@ -228,26 +231,33 @@ calc_hero_velocity :: proc(hero: Hero, direction: direction) -> (new_velocity: f
 }
 
 
-move_entity :: proc(hero: ^Hero, direction: direction, velocity: f32) {
+move_entity :: proc(hero: ^Hero, direction: direction, velocity: f32, camera: ^rl.Camera2D) {
 	hero.move_velocity = velocity
 	hero.move_direction = direction
 
 	delta := rl.GetFrameTime()
+	new_x, new_y: f32
 	switch direction {
 	case .up:
-		new_pos_y := clamp(hero.pos_y - velocity * delta, 0.0, f32(rl.GetScreenHeight()))
-		hero.pos_y = new_pos_y
+		new_y = clamp(hero.pos_y - velocity * delta, 0.0, f32(rl.GetScreenHeight()))
+		y_diff := hero.pos_y - new_y
 	case .down:
-		hero.pos_y = clamp(hero.pos_y + velocity * delta, 0, f32(rl.GetScreenHeight()))
+		new_y := clamp(hero.pos_y + velocity * delta, 0, f32(rl.GetScreenHeight()))
+		y_diff := hero.pos_y - new_y
 	case .left:
-		hero.pos_x = clamp(hero.pos_x - velocity * delta, 0, f32(rl.GetScreenWidth()))
+		new_x := clamp(hero.pos_x - velocity * delta, 0, f32(rl.GetScreenWidth()))
+		x_diff := hero.pos_x - new_x
 	case .right:
-		hero.pos_x = clamp(hero.pos_x + velocity * delta, 0, f32(rl.GetScreenWidth()))
-
+		new_x := clamp(hero.pos_x + velocity * delta, 0, f32(rl.GetScreenWidth()))
+		x_diff := hero.pos_x - new_x
 	case .None:
 		fmt.println("stopped")
-
 	}
+
+	hero.pos_y = new_y
+	hero.pos_x = new_x
+    //camera.target.x = hero.pos_x
+    //camera.target.y = hero.pos_y
 }
 
 
