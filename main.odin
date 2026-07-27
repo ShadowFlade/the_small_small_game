@@ -1,3 +1,4 @@
+#+feature dynamic-literals
 package main
 import c "core:c"
 import fmt "core:fmt"
@@ -20,6 +21,7 @@ mode := imode.debug
 main :: proc() {
 	rl.SetConfigFlags({.VSYNC_HINT})
 	rl.SetTargetFPS(144)
+
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, cstring("D2RENA"))
 
 	hero := new_hero(
@@ -35,42 +37,51 @@ main :: proc() {
 	)
 	enemies := create_enemies(3)
 
-	camera := rl.Camera2D{}
+	camera := rl.Camera2D {
+	} 	//
 
 	for !rl.WindowShouldClose() {
 		//------------------------LOGIC------------------------------------
 		hero_moved_last_frame := hero.moved_this_frame
 		hero.moved_this_frame = false
+
 		//defer hero.moved_this_frame = false
 		x := hero.pos_x
 		y := hero.pos_y
 
 
-		if rl.IsKeyDown(.LEFT) || rl.IsKeyDown(.A) {
-			direction := direction.left
-			new_hero_velocity := calc_hero_velocity(hero, direction)
-			move_entity(&hero, direction, new_hero_velocity, &camera)
-			hero.moved_this_frame = true
-		}
-		if rl.IsKeyDown(.RIGHT) || rl.IsKeyDown(.D) {
-			direction := direction.right
-			new_hero_velocity := calc_hero_velocity(hero, direction)
-			move_entity(&hero, direction, new_hero_velocity, &camera)
-			hero.moved_this_frame = true
-		}
-		if rl.IsKeyDown(.DOWN) || rl.IsKeyDown(.S) {
-			direction := direction.down
-			new_hero_velocity := calc_hero_velocity(hero, direction)
-			move_entity(&hero, direction, new_hero_velocity, &camera)
-			hero.moved_this_frame = true
-		}
-		if rl.IsKeyDown(.UP) || rl.IsKeyDown(.W) {
-			direction := direction.up
-			new_hero_velocity := calc_hero_velocity(hero, direction)
-			move_entity(&hero, direction, new_hero_velocity, &camera)
-			hero.moved_this_frame = true
-		}
+		new_hero_velocity: f32
+
+        keyPressed := rl.GetKeyPressed()
+        dir, isDirectionKey := keyboard_key_to_direction_map[keyPressed]
+
+        if isDirectionKey {
+            new_hero_velocity = calc_hero_velocity(hero, dir)
+            hero.moved_this_frame = true
+        }
+
+
+
+        keyStr : cstring
+        #partial switch keyPressed {
+        case rl.KeyboardKey.D:
+            keyStr = "D"
+        case rl.KeyboardKey.S:
+            keyStr = "S"
+        case rl.KeyboardKey.W:
+            keyStr = "W"
+        case rl.KeyboardKey.A:
+            keyStr = "A"
+        case:
+            keyStr = "UNKNOWN"
+        }
+
+        rl.SetTraceLogLevel(.DEBUG)
+        rl.TraceLog(rl.TraceLogLevel.DEBUG, keyStr)
+
+		move_entity(&hero, dir, new_hero_velocity, &camera)
 		rect := rl.Rectangle{hero.pos_x, hero.pos_y, hero.width, hero.height}
+
 		if hero_moved_last_frame && !hero.moved_this_frame {
 			move_entity(&hero, hero.move_direction, f32(hero.weight), &camera)
 		}
@@ -258,10 +269,21 @@ move_entity :: proc(hero: ^Hero, direction: direction, velocity: f32, camera: ^r
 	ct := &camera.target
 	ct[0] = hero.pos_x
 	ct[1] = hero.pos_y
-    ct.x = hero.pos_x
-    ct.y = hero.pos_y
+	ct.x = hero.pos_x
+	ct.y = hero.pos_y
 }
 
+
+keyboard_key_to_direction_map := map[rl.KeyboardKey]direction{
+    rl.KeyboardKey.D = direction.right,
+    rl.KeyboardKey.A = direction.left,
+    rl.KeyboardKey.S = direction.down,
+    rl.KeyboardKey.W = direction.up,
+    rl.KeyboardKey.UP = direction.up,
+    rl.KeyboardKey.DOWN = direction.down,
+    rl.KeyboardKey.LEFT = direction.left,
+    rl.KeyboardKey.RIGHT = direction.right,
+}
 
 draw_entity :: proc(hero: ^Hero, shape: rl.Rectangle) {
 	rl.DrawRectangleRec({hero.pos_x, hero.pos_y, hero.width, hero.height}, COLOR_RED)
