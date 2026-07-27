@@ -39,17 +39,12 @@ main :: proc() {
 
 	camera := rl.Camera2D{} //
 
-	lastKeyPressed : rl.KeyboardKey
 
 	for !rl.WindowShouldClose() {
 		//------------------------LOGIC------------------------------------
 		hero_moved_last_frame := hero.moved_this_frame
 		hero.moved_this_frame = false
-		keyPressed := rl.GetKeyPressed()
 
-        rl.IsKeyPressed(keyPressed) && lastKeyPressed ==  move_key {
-
-        }
 		//defer hero.moved_this_frame = false
 		x := hero.pos_x
 		y := hero.pos_y
@@ -59,29 +54,28 @@ main :: proc() {
 		rl.SetTraceLogLevel(.DEBUG)
 		keyStr: cstring
 
-		#partial switch keyPressed {
-		case rl.KeyboardKey.D:
-			keyStr = "D"
-		case rl.KeyboardKey.S:
-			keyStr = "S"
-		case rl.KeyboardKey.W:
-			keyStr = "W"
-		case rl.KeyboardKey.A:
-			keyStr = "A"
-		case:
-			keyStr = "UNKNOWN"
-		}
 
 		rl.TraceLog(rl.TraceLogLevel.DEBUG, keyStr)
 
-		dir, isDirectionKey := keyboard_move_key_to_direction_map[keyPressed]
+        dir : direction
+        if rl.IsKeyPressed(.W) || rl.IsKeyPressed(.UP) {
+            dir = .up
+            hero.moved_this_frame = true
+        } else if rl.IsKeyPressed(.A) || rl.IsKeyPressed(.LEFT) {
+            dir = .left
+            hero.moved_this_frame = true
+        } else if rl.IsKeyPressed(.D) || rl.IsKeyPressed(.RIGHT) {
+            dir = .right
+            hero.moved_this_frame = true
+        } else if rl.IsKeyPressed(.S) || rl.IsKeyPressed(.DOWN) {
+            dir = .down
+            hero.moved_this_frame = true
+        }
 
-		if isDirectionKey {
-			new_hero_velocity = calc_hero_velocity(hero, dir)
-			hero.moved_this_frame = true
-		}
 
 
+
+        new_hero_velocity = calc_hero_velocity(hero, dir)
 		move_entity(&hero, dir, new_hero_velocity, &camera)
 		rect := rl.Rectangle{hero.pos_x, hero.pos_y, hero.width, hero.height}
 
@@ -219,6 +213,19 @@ draw_enemies_moving_from_side_to_side :: proc(enemies: []Enemy) {
 	}
 }
 
+keyboard_move_key_to_direction_map := map[rl.KeyboardKey]direction {
+    .UP = .up,
+    .DOWN = .down,
+    .LEFT = .left,
+    .RIGHT = .right,
+
+    .W = .up,
+    .S = .down,
+    .A = .left,
+    .D = .right,
+
+}
+
 is_direction_opposite :: proc(dir1: direction, dir2: direction) -> bool {
 	if dir1 == .up && dir2 == .down || dir1 == .down && dir2 == .up {
 		return true
@@ -277,27 +284,6 @@ move_entity :: proc(hero: ^Hero, direction: direction, velocity: f32, camera: ^r
 }
 
 
-move_key :: union {
-	rl.KeyboardKey.D,
-	rl.KeyboardKey.A,
-	rl.KeyboardKey.S,
-	rl.KeyboardKey.W,
-	rl.KeyboardKey.UP,
-	rl.KeyboardKey.DOWN,
-	rl.KeyboardKey.LEFT,
-	rl.KeyboardKey.RIGHT,
-}
-
-keyboard_move_key_to_direction_map := map[move_key]direction {
-	rl.KeyboardKey.D     = direction.right,
-	rl.KeyboardKey.A     = direction.left,
-	rl.KeyboardKey.S     = direction.down,
-	rl.KeyboardKey.W     = direction.up,
-	rl.KeyboardKey.UP    = direction.up,
-	rl.KeyboardKey.DOWN  = direction.down,
-	rl.KeyboardKey.LEFT  = direction.left,
-	rl.KeyboardKey.RIGHT = direction.right,
-}
 
 draw_entity :: proc(hero: ^Hero, shape: rl.Rectangle) {
 	rl.DrawRectangleRec({hero.pos_x, hero.pos_y, hero.width, hero.height}, COLOR_RED)
