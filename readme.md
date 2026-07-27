@@ -9,8 +9,11 @@ ball_to_entity := entity_middle_pos - ball_pos //??
 
 
 ## left on
-broke the camera ((
+1. broke the camera ((
 we should just set pos of camera.target ??
+
+
+2. figure out the right way to handle move_key and direction
 
 
 ## SETUP
