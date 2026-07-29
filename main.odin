@@ -3,22 +3,33 @@ package main
 import c "core:c"
 import fmt "core:fmt"
 import math "core:math"
-import rand "core:math/rand"
-import os "core:os"
 import rl "vendor:raylib"
+import mem "core:mem"
 
-HERO_DEFAULT_WIDTH :: 100.0
 imode :: enum {
 	debug,
 }
-HERO_DEFAULT_HEIGHT :: 100.0
 COLOR_RED :: rl.Color{255, 0, 0, 255}
-HERO_MOVESPEED_MAX :: 500
 WINDOW_HEIGHT :: 720
 WINDOW_WIDTH :: 1280
 mode := imode.debug
 
 main :: proc() {
+    tracking_allocator : mem.Tracking_Allocator
+    mem.tracking_allocator_init(&tracking_allocator, context.allocator)
+    context.allocator = mem.tracking_allocator(&tracking_allocator)
+
+    reset_tracking_allocator :: proc(a: ^mem.Tracking_Allocator) {
+        for key, value in a.allocation_map {
+            fmt.printf("%v: leaked %v bytes \n", value.location, value.size)
+        }
+        mem.tracking_allocator_clear(a)
+    }
+
+    defer reset_tracking_allocator(&tracking_allocator)
+
+
+
 	rl.SetConfigFlags({.VSYNC_HINT})
 	rl.SetTargetFPS(144)
 
@@ -52,22 +63,23 @@ main :: proc() {
 
 		new_hero_velocity: f32
 		rl.SetTraceLogLevel(.DEBUG)
-		keyStr: cstring
+		//keyStr: cstring
 
 
-		rl.TraceLog(rl.TraceLogLevel.DEBUG, keyStr)
+		//rl.TraceLog(rl.TraceLogLevel.DEBUG, keyStr)
 
-        dir : direction
-        if rl.IsKeyPressed(.W) || rl.IsKeyPressed(.UP) {
+        dir := direction.None
+
+        if rl.IsKeyDown(.W) || rl.IsKeyDown(.UP) {
             dir = .up
             hero.moved_this_frame = true
-        } else if rl.IsKeyPressed(.A) || rl.IsKeyPressed(.LEFT) {
+        } else if rl.IsKeyDown(.A) || rl.IsKeyDown(.LEFT) {
             dir = .left
             hero.moved_this_frame = true
-        } else if rl.IsKeyPressed(.D) || rl.IsKeyPressed(.RIGHT) {
+        } else if rl.IsKeyDown(.D) || rl.IsKeyDown(.RIGHT) {
             dir = .right
             hero.moved_this_frame = true
-        } else if rl.IsKeyPressed(.S) || rl.IsKeyPressed(.DOWN) {
+        } else if rl.IsKeyDown(.S) || rl.IsKeyDown(.DOWN) {
             dir = .down
             hero.moved_this_frame = true
         }
@@ -109,98 +121,7 @@ main :: proc() {
 
 
 /// ------------------------------------------ HERO -------------------------
-Hero :: struct {
-	width:             f32,
-	height:            f32,
-	pos_x:             f32,
-	pos_y:             f32,
-	movespeed:         f32,
-	move_velocity:     f32,
-	look_direction:    rl.Vector2,
-	move_direction:    direction,
-	move_acceleration: f32,
-	weight:            int,
-	last_frame_moved:  bool,
-	moved_this_frame:  bool,
-}
 
-
-new_hero :: proc(
-	width: f32,
-	height: f32,
-	pos_x: f32,
-	pos_y: f32,
-	movespeed: f32 = 10,
-	move_velocity: f32 = 10,
-	look_direction: rl.Vector2 = {0.0, -1.0},
-	move_direction: direction = direction.None,
-	move_acceleration: f32 = .2,
-	weight: int,
-) -> Hero {
-
-	if movespeed > HERO_MOVESPEED_MAX {
-		fmt.println("Error: hero speed cant be more than max speed")
-		os.exit(1)
-	}
-
-	look_end_x := f32(rl.GetScreenWidth()) / 2.0
-	look_end_y := f32(rl.GetScreenHeight()) / 2.0
-
-	return Hero {
-		width = width,
-		height = height,
-		pos_x = pos_x,
-		pos_y = pos_y,
-		movespeed = movespeed,
-		move_velocity = move_velocity,
-		look_direction = {look_end_x, look_end_y},
-		move_direction = move_direction,
-		move_acceleration = move_acceleration,
-		weight = weight,
-		last_frame_moved = false,
-		moved_this_frame = false,
-	}
-}
-
-direction :: enum {
-	up,
-	down,
-	left,
-	right,
-	None,
-}
-
-Enemy :: struct {
-	pos:          rl.Vector2,
-	movespeed:    f16,
-	velocity:     f16,
-	acceleration: f16,
-	health:       int,
-	width:        f32,
-}
-
-
-create_enemies :: proc(count: int) -> []Enemy {
-	enemies := make([]Enemy, count)
-	enemy_padding: f32 = 100
-	enemy_y: f32 = 20
-
-	for i in 0 ..< count {
-		rand_number := clamp(rand.float32() * 3000, 0.0, f32(rl.GetScreenWidth()))
-		fmt.println(rand_number)
-		enemies[i] = Enemy {
-			pos          = rl.Vector2{rand_number, enemy_y},
-			movespeed    = 50,
-			velocity     = 200,
-			acceleration = .2,
-			health       = 100,
-			width        = 30,
-		}
-		enemy_y += enemy_padding
-	}
-
-	return enemies
-}
 
 draw_enemies_moving_from_side_to_side :: proc(enemies: []Enemy) {
 	for enemy in enemies {
